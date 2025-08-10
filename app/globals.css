@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0b0c0f;
+  --card: #121319;
+  --muted: #94a3b8;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: white;
+}
+
+.container {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.card {
+  border-radius: 1rem;
+  box-shadow: 0 6px 30px -12px rgba(0, 0, 0, .5);
+  padding: 1rem;
+  background: var(--card);
+  border: 1px solid rgba(255, 255, 255, .06);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  border-radius: .75rem;
+  padding: .5rem .75rem;
+  background: rgba(255, 255, 255, .08);
+  transition: .15s;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, .15);
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  border-radius: .75rem;
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid rgba(255, 255, 255, .1);
+  padding: .5rem .75rem;
+  outline: none;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .2)
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  border-bottom: 1px solid rgba(255, 255, 255, .1);
+  padding: .5rem 0;
+  font-size: .9rem;
+}
+
+.table th {
+  text-align: left;
+  color: rgba(255, 255, 255, .7);
+  font-weight: 600;
+}
+
+.warn {
+  color: #fde68a;
+}
+
+.err {
+  color: #fca5a5;
+}
+
+.good {
+  color: #86efac;
+}
