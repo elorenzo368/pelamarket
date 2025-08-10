@@ -29,6 +29,7 @@ type State = {
   advanced: AdvancedSettings
   repo?: Repo
   isHydrated: boolean
+  isExampleData: boolean
 } & PriceState
 
 type PriceActions = {
@@ -53,6 +54,7 @@ type Actions = {
   importAll: (json: string) => void
   resetAll: () => void
   setHydrated: () => void
+  toggleExampleData: (on: boolean) => Promise<void>
 } & PriceActions
 
 // === SINGLETON PriceService ===
@@ -90,6 +92,7 @@ export const useAppStore = create<State & Actions>()((set, get) => ({
   advanced: { workshopStarsHalf: {}, masteryLevel: {} },
   repo: undefined,
   isHydrated: false,
+  isExampleData: false,
 
   // estado de precios - valores por defecto sin localStorage
   priceProviderId: 'manual',
@@ -108,7 +111,8 @@ export const useAppStore = create<State & Actions>()((set, get) => ({
       resources: data?.resources ?? [],
       factories: data?.factories ?? [],
       multipliers: data?.multipliers ?? {},
-      advanced: data?.advanced ?? { workshopStarsHalf: {}, masteryLevel: {} }
+      advanced: data?.advanced ?? { workshopStarsHalf: {}, masteryLevel: {} },
+      isExampleData: repo.isExampleData()
     })
 
     // Cargar preferencias de precios solo después de la hidratación
@@ -135,27 +139,27 @@ export const useAppStore = create<State & Actions>()((set, get) => ({
 
   upsertResource: async (r: Resource) => {
     const repo = get().repo; if (repo) await repo.upsertResource(r)
-    set(state => ({ resources: [...state.resources.filter(x => x.id !== r.id), r] }))
+    set(state => ({ resources: [...state.resources.filter(x => x.id !== r.id), r], isExampleData: false }))
   },
 
   deleteResource: async (id: string) => {
     const repo = get().repo; if (repo) await repo.deleteResource(id)
-    set(state => ({ resources: state.resources.filter(r => r.id !== id) }))
+    set(state => ({ resources: state.resources.filter(r => r.id !== id), isExampleData: false }))
   },
 
   upsertFactory: async (f: Factory) => {
     const repo = get().repo; if (repo) await repo.upsertFactory(f)
-    set(state => ({ factories: [...state.factories.filter(x => x.id !== f.id), f] }))
+    set(state => ({ factories: [...state.factories.filter(x => x.id !== f.id), f], isExampleData: false }))
   },
 
   deleteFactory: async (id: string) => {
     const repo = get().repo; if (repo) await repo.deleteFactory(id)
-    set(state => ({ factories: state.factories.filter(f => f.id !== id) }))
+    set(state => ({ factories: state.factories.filter(f => f.id !== id), isExampleData: false }))
   },
 
   setMultipliers: async (m: Multipliers) => {
     const repo = get().repo; if (repo) await repo.setMultipliers(m)
-    set({ multipliers: m })
+    set({ multipliers: m, isExampleData: false })
   },
 
   setWorkshopStars: (resourceId, starsHalf) => {
@@ -174,13 +178,24 @@ export const useAppStore = create<State & Actions>()((set, get) => ({
   importAll: (json: string) => {
     const parsed = ExportSchema.parse(JSON.parse(json))
     const repo = get().repo; if (repo) repo.saveAll(parsed)
-    set({ resources: parsed.resources, factories: parsed.factories, multipliers: parsed.multipliers, advanced: parsed.advanced ?? { workshopStarsHalf: {}, masteryLevel: {} } })
+    set({ resources: parsed.resources, factories: parsed.factories, multipliers: parsed.multipliers, advanced: parsed.advanced ?? { workshopStarsHalf: {}, masteryLevel: {} }, isExampleData: false })
   },
 
   resetAll: async () => {
     const repo = get().repo; if (repo) await repo.reset()
     const reloaded = await repo?.load()
-    set({ resources: reloaded?.resources ?? [], factories: reloaded?.factories ?? [], multipliers: reloaded?.multipliers ?? {}, advanced: reloaded?.advanced ?? { workshopStarsHalf: {}, masteryLevel: {} } })
+    set({ resources: reloaded?.resources ?? [], factories: reloaded?.factories ?? [], multipliers: reloaded?.multipliers ?? {}, advanced: reloaded?.advanced ?? { workshopStarsHalf: {}, masteryLevel: {} }, isExampleData: repo?.isExampleData() ?? false })
+  },
+
+  toggleExampleData: async (on: boolean) => {
+    const repo = get().repo; if (!repo) return
+    if (on) {
+      await repo.reset()
+    } else {
+      await repo.saveAll({ version: 2, resources: [], factories: [], multipliers: {}, advanced: { workshopStarsHalf: {}, masteryLevel: {} } })
+    }
+    const reloaded = await repo.load()
+    set({ resources: reloaded?.resources ?? [], factories: reloaded?.factories ?? [], multipliers: reloaded?.multipliers ?? {}, advanced: reloaded?.advanced ?? { workshopStarsHalf: {}, masteryLevel: {} }, isExampleData: repo.isExampleData() })
   },
 
   // === acciones de precios ===

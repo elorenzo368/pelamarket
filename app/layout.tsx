@@ -2,6 +2,7 @@ import './globals.css'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { Providers } from './providers'
+import ExampleBanner from '@components/ExampleBanner'
 
 export const metadata = {
   title: 'Craft World – DynoCoin Analytics',
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
               <div className="ml-auto text-sm text-white/60">Local-first • v0.3.0</div>
             </nav>
           </header>
+          <ExampleBanner />
           <main className="container py-6">{children}</main>
           <footer className="container py-8 text-center text-white/40 text-sm">
             Craft World – DynoCoin Analytics • Local storage • Reemplazable por DB

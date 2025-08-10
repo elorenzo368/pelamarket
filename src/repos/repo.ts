@@ -16,4 +16,10 @@ export interface Repo {
   setMultipliers(m: Multipliers): Promise<void>
 
   reset(): Promise<void>
+  /**
+   * Indica si el repositorio contiene únicamente los datos de ejemplo
+   * provistos por la aplicación. Se usa para mostrar el banner y poder
+   * reescribir el estado con el seed cuando el usuario lo solicita.
+   */
+  isExampleData(): boolean
 }
