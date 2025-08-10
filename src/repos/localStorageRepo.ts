@@ -11,6 +11,7 @@ const K_FAC = key('factories')
 const K_MUL = key('multipliers')
 const K_ADV = key('advanced')
 const K_VER = `${NS}:version`
+const K_EXAMPLE = key('example')
 
 const seed: ExportShape = {
   version: VERSION,
@@ -34,6 +35,16 @@ const seed: ExportShape = {
 }
 
 export class LocalStorageRepo implements Repo {
+  private markExample(flag: boolean) {
+    if (typeof window === 'undefined') return
+    try { localStorage.setItem(K_EXAMPLE, flag ? '1' : '0') } catch {}
+  }
+
+  isExampleData(): boolean {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem(K_EXAMPLE) === '1'
+  }
+
   private ensureInit() {
     if (typeof window === 'undefined') return
     const ver = Number(localStorage.getItem(K_VER) ?? '0')
@@ -47,8 +58,10 @@ export class LocalStorageRepo implements Repo {
         localStorage.setItem(K_FAC, JSON.stringify(seed.factories))
         localStorage.setItem(K_MUL, JSON.stringify(seed.multipliers))
         localStorage.setItem(K_ADV, JSON.stringify(seed.advanced))
+        this.markExample(true)
       } else {
         if (!prevAdv) localStorage.setItem(K_ADV, JSON.stringify({ workshopStarsHalf: {}, masteryLevel: {} }))
+        this.markExample(false)
       }
       localStorage.setItem(K_VER, String(VERSION))
     }
@@ -75,6 +88,7 @@ export class LocalStorageRepo implements Repo {
     localStorage.setItem(K_MUL, JSON.stringify(parsed.multipliers))
     localStorage.setItem(K_ADV, JSON.stringify(parsed.advanced ?? { workshopStarsHalf: {}, masteryLevel: {} }))
     localStorage.setItem(K_VER, String(VERSION))
+    this.markExample(false)
   }
 
   async getResources(): Promise<Resource[]> { const all = await this.load(); return all?.resources ?? [] }
@@ -90,7 +104,7 @@ export class LocalStorageRepo implements Repo {
 
   async reset(): Promise<void> {
     if (typeof window === 'undefined') return
-    localStorage.removeItem(K_RES); localStorage.removeItem(K_FAC); localStorage.removeItem(K_MUL); localStorage.removeItem(K_ADV); localStorage.removeItem(K_VER)
+    localStorage.removeItem(K_RES); localStorage.removeItem(K_FAC); localStorage.removeItem(K_MUL); localStorage.removeItem(K_ADV); localStorage.removeItem(K_VER); localStorage.removeItem(K_EXAMPLE)
     this.ensureInit()
   }
 }

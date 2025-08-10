@@ -1,13 +1,22 @@
 'use client'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useAppStore } from '@store/useStore'
 import { AutoDetectService } from '@services/autoDetect'
 import { importFromCraftworldTips } from '@utils/craftworldTipsImport'
 
 export default function SettingsPage() {
-  const { multipliers, setMultipliers, exportAll, importAll, resetAll, resources, advanced, setWorkshopStars, setMasteryLevel } = useAppStore()
+  const { multipliers, setMultipliers, exportAll, importAll, resetAll, resources, advanced, setWorkshopStars, setMasteryLevel, isExampleData, toggleExampleData } = useAppStore()
   const fileRef = useRef<HTMLInputElement>(null)
   const levelRef = useRef<HTMLInputElement>(null)
+  const [voyaId, setVoyaId] = useState('')
+  const [detectUrl, setDetectUrl] = useState('')
+
+  useEffect(() => {
+    setVoyaId(localStorage.getItem('cw:voyaId') || '')
+    setDetectUrl(localStorage.getItem('cw:detectUrl') || '')
+  }, [])
+  useEffect(() => { try { localStorage.setItem('cw:voyaId', voyaId) } catch {} }, [voyaId])
+  useEffect(() => { try { localStorage.setItem('cw:detectUrl', detectUrl) } catch {} }, [detectUrl])
 
   const onImport = async (file: File) => {
     const txt = await file.text()
@@ -15,10 +24,9 @@ export default function SettingsPage() {
   }
 
   const onDetect = async () => {
-    const tokens = prompt('Ingresa tokens/IDs (ej. VOYA ID) para intento de detección (beta):', '')
-    const data = await AutoDetectService.tryLoad(tokens || undefined)
-    if (!data) { alert('No se pudo detectar automáticamente (MVP). Continúa en modo manual.'); return }
-    const ok = confirm('Se detectó un setup válido. ¿Deseas sobrescribir tu configuración actual?')
+    const data = await AutoDetectService.tryLoad({ voyaId, urlTemplate: detectUrl })
+    if (!data) { alert('No se pudo detectar automáticamente.'); return }
+    const ok = confirm(`Se detectaron ${data.resources.length} recursos y ${data.factories.length} fábricas. ¿Sobrescribir setup actual?`)
     if (ok) { importAll(JSON.stringify(data, null, 2)) }
   }
 
@@ -80,7 +88,8 @@ export default function SettingsPage() {
 
       <div className="card grid gap-3">
         <h2 className="font-semibold">Import / Export</h2>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" className="checkbox" checked={isExampleData} onChange={e => toggleExampleData(e.target.checked)} /> Cargar datos de ejemplo</label>
           <button className="btn" onClick={() => { const blob = new Blob([exportAll()], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'craftworld-setup.json'; a.click(); URL.revokeObjectURL(a.href) }}>Exportar JSON</button>
           <input ref={fileRef} type="file" accept="application/json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onImport(f) }} />
           <button className="btn" onClick={() => fileRef.current?.click()}>Importar JSON</button>
@@ -100,7 +109,9 @@ export default function SettingsPage() {
             }
           }}>Importar craftworld.tips</button>
           <input ref={levelRef} type="number" min={1} max={50} defaultValue={1} className="input max-w-24" title="Nivel por defecto L" />
-          <button className="btn" onClick={onDetect}>Detección automática (beta)</button>
+          <input className="input max-w-24" placeholder="Voya ID" value={voyaId} onChange={e => setVoyaId(e.target.value)} />
+          <input className="input w-64" placeholder="URL plantilla" value={detectUrl} onChange={e => setDetectUrl(e.target.value)} />
+          <button className="btn" onClick={onDetect}>Probar detección</button>
           <button className="btn" onClick={() => { if (confirm('Esto borrará tu setup local. ¿Continuar?')) resetAll() }}>Reset</button>
         </div>
       </div>
@@ -111,10 +122,15 @@ export default function SettingsPage() {
 function PriceControls() {
   const fileRef = useRef<HTMLInputElement>(null)
   const [snapshotName, setSnapshotName] = useState<string>('')
-  const { priceProviderId, setProvider, priceTTLms, setTTL, priceRemoteUrl, setRemoteUrl, applyOverlayToResources, refreshPrices, importSnapshotText } = useAppStore()
+  const { priceProviderId, setProvider, priceTTLms, setTTL, priceRemoteUrl, setRemoteUrl, applyOverlayToResources, refreshPrices, importSnapshotText, priceLastUpdated } = useAppStore()
+  const formatTime = (ts: number) => new Date(ts).toLocaleTimeString()
 
   return (
     <div className="grid gap-3">
+      <div className="flex items-center justify-between text-sm">
+        <span>{priceProviderId === 'remote-json' ? '🟢 Live' : priceProviderId === 'snapshot' ? '🟡 Snapshot' : '⚪ Manual'}</span>
+        <span className="text-white/60">{priceLastUpdated ? `Última actualización: ${formatTime(priceLastUpdated)}` : 'Sin actualizar'}</span>
+      </div>
       <div className="grid sm:grid-cols-3 gap-3">
         <label className="grid gap-1">
           <span className="text-sm text-white/70">Fuente</span>
@@ -140,7 +156,7 @@ function PriceControls() {
       </div>
 
       {priceProviderId === 'snapshot' && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input ref={fileRef} type="file" accept="application/json" className="hidden"
             onChange={async (e) => {
               const f = e.target.files?.[0]
@@ -157,6 +173,11 @@ function PriceControls() {
             await importSnapshotText(raw)
             setSnapshotName('pegado-manual.json')
           }}>Pegar JSON</button>
+          <button className="btn" onClick={async () => {
+            const demo = { prices: { COPPER: { currentPrice: 10 } } }
+            await importSnapshotText(JSON.stringify(demo))
+            setSnapshotName('demo.json')
+          }}>Probar snapshot de ejemplo</button>
         </div>
       )}
 
